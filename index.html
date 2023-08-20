@@ -94,6 +94,8 @@
         
         <button type="button" onclick="addDelivery()">Pridať doručenie</button>
     </form>
+
+    <button type="button" onclick="refreshDeliveries()">Obnoviť doručenia</button>
     
     <h2>Doručenia:</h2>
     <table id="deliveryTable">
@@ -131,12 +133,16 @@
     </table>
     
     <script>
+        window.onload = function() {
+            loadDeliveries();
+        };
+
         function addDelivery() {
             var address = document.getElementById("address").value;
             var mobileNumber = document.getElementById("mobileNumber").value;
             var price = parseFloat(document.getElementById("price").value);
             var tips = parseFloat(document.getElementById("tips").value);
-            
+
             var table = document.getElementById("deliveryTable");
             var newRow = table.insertRow(-1);
             var cell1 = newRow.insertCell(0);
@@ -144,54 +150,102 @@
             var cell3 = newRow.insertCell(2);
             var cell4 = newRow.insertCell(3);
             var cell5 = newRow.insertCell(4);
-            
+
+            var deliveryId = Date.now();
+            var deliveryTimestamp = new Date().toLocaleString();
+
             cell1.innerHTML = address;
             cell2.innerHTML = mobileNumber;
             cell3.innerHTML = price.toFixed(2) + " €";
             cell4.innerHTML = tips.toFixed(2) + " €";
             cell5.innerHTML = (price + tips).toFixed(2) + " €";
-            
+
+            saveDelivery(deliveryId, deliveryTimestamp, address, mobileNumber, price, tips);
+
             clearForm();
             updateTotals();
         }
-        
+
         function clearForm() {
             document.getElementById("address").value = "";
             document.getElementById("mobileNumber").value = "";
             document.getElementById("price").value = "";
             document.getElementById("tips").value = "";
         }
-        
+
+        function saveDelivery(id, timestamp, address, mobileNumber, price, tips) {
+            var deliveries = JSON.parse(localStorage.getItem("deliveries")) || [];
+
+            deliveries.push({
+                id: id,
+                timestamp: timestamp,
+                address: address,
+                mobileNumber: mobileNumber,
+                price: price,
+                tips: tips
+            });
+
+            localStorage.setItem("deliveries", JSON.stringify(deliveries));
+        }
+
+        function loadDeliveries() {
+            var deliveries = JSON.parse(localStorage.getItem("deliveries")) || [];
+
+            var table = document.getElementById("deliveryTable");
+
+            for (var i = 0; i < deliveries.length; i++) {
+                var newRow = table.insertRow(-1);
+                var cell1 = newRow.insertCell(0);
+                var cell2 = newRow.insertCell(1);
+                var cell3 = newRow.insertCell(2);
+                var cell4 = newRow.insertCell(3);
+                var cell5 = newRow.insertCell(4);
+
+                cell1.innerHTML = deliveries[i].address;
+                cell2.innerHTML = deliveries[i].mobileNumber;
+                cell3.innerHTML = deliveries[i].price.toFixed(2) + " €";
+                cell4.innerHTML = deliveries[i].tips.toFixed(2) + " €";
+                cell5.innerHTML = (deliveries[i].price + deliveries[i].tips).toFixed(2) + " €";
+            }
+
+            updateTotals();
+        }
+
+        function updateTotals() {
+            var totalPrice = 0;
+            var totalTips = 0;
+            var table = document.getElementById("deliveryTable");
+
+            for (var i = 1; i < table.rows.length; i++) {
+                totalPrice += parseFloat(table.rows[i].cells[2].textContent);
+                totalTips += parseFloat(table.rows[i].cells[3].textContent);
+            }
+
+            document.getElementById("totalPrice").textContent = totalPrice.toFixed(2) + " €";
+            document.getElementById("totalTips").textContent = totalTips.toFixed(2) + " €";
+        }
+
         function calculateChange() {
             var amountPaid = parseFloat(document.getElementById("amountPaid").value);
             var totalAmount = parseFloat(document.getElementById("totalAmount").value);
-            
+
             if (isNaN(amountPaid) || isNaN(totalAmount)) {
                 document.getElementById("changeResult").textContent = "Prosím zadajte platné čiastky.";
-                return
+                return;
             }
-            
+
             var change = amountPaid - totalAmount;
-            
+
             if (change < 0) {
                 document.getElementById("changeResult").textContent = "Zaplatená suma je nedostatočná.";
             } else {
                 document.getElementById("changeResult").textContent = "Vrátiť späť: " + change.toFixed(2) + " €";
             }
         }
-        
-        function updateTotals() {
-            var totalPrice = 0;
-            var totalTips = 0;
-            var table = document.getElementById("deliveryTable");
-            
-            for (var i = 1; i < table.rows.length; i++) {
-                totalPrice += parseFloat(table.rows[i].cells[2].textContent);
-                totalTips += parseFloat(table.rows[i].cells[3].textContent);
-            }
-            
-            document.getElementById("totalPrice").textContent = totalPrice.toFixed(2) + " €";
-            document.getElementById("totalTips").textContent = totalTips.toFixed(2) + " €";
+
+        function refreshDeliveries() {
+            localStorage.removeItem("deliveries");
+            location.reload();
         }
     </script>
 </body>
